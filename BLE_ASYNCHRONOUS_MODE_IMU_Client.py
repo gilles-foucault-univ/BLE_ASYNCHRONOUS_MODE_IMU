@@ -266,14 +266,14 @@ class BLEAsynchronousModeIMUClient(object):
 #default values of parameters
 # activate all IMU fileds                
 ax=ay=az=gx=gy=gz=mx=my=mz=1
-# log during 1 second
+# log during <int> seconds
 duration=60
 # recording_type: 0 (slower sampling rate, BLE communication is not stopped)
 # or 10513 (highest frame rate, BLE communication is stopped during sampling)
 recording_type = 10513
 # Debug mode: False by default
 debug_mode = False
-# BLE Peripheral Address 
+# BLE Peripheral Address copied from the Arduino serial monitor
 ble_peripheral_address='14:2a:5f:05:b4:f7'
 # Main function to run the program
 async def main():
