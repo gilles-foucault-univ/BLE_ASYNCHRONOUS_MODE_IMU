@@ -1,8 +1,8 @@
 # BLE Asynchronous transfer mode IMU
 This code connects to the Arduino Nano 33 BLE Peripheral and executes commands to sample
 Bosch BMI270 IMU axes (acceleration, gyroscope, magnetometer).
-In order to maximize the sampling rate, data are transfer asynchronously after sampling.
-Sampling rate is:
+In order to maximize the sampling rate, data are transfered asynchronously *after* sampling.
+The achieved sampling rate is:
 - 167Hz for 6DOF (acceleration+gyroscope) when the sampling method *stops* BLE communication during transfer (RECORD_DURING_SECONDS)
 - 96Hz for 6DOF (acceleration+gyroscope) when the sampling method *does not* stop BLE during transfer (RECORD_UNTIL_STOP)
 
