@@ -7,8 +7,8 @@ The achieved sampling rate is:
 - 96Hz for 6DOF (acceleration+gyroscope) when the sampling method *does not* stop BLE during transfer (RECORD_UNTIL_STOP)
 
 Example of transferring file data over BLE to an Arduino Nano Sense using WebBLE are in:
-out_05272025_102118_14-2A-5F-05-B4-F7.xlsx (RECORD_DURING_SECONDS)
-out_05272025_102038_14-2A-5F-05-B4-F7.xlsx (RECORD_UNTIL_STOP)
+- out_05272025_102118_14-2A-5F-05-B4-F7.xlsx (RECORD_DURING_SECONDS)
+- out_05272025_102038_14-2A-5F-05-B4-F7.xlsx (RECORD_UNTIL_STOP)
 
 The total number of samples is limited by the RAM of the arduino nano 33 ble: 100 * 1024 float values 
 
