@@ -58,8 +58,9 @@ sampling_time_characteristic	UUID 3701be4f-9913-4fa7-a6f9-617c3c7f8c0f	BLERead
 	Total time in milliseconds of the last recording.	long
 samples_block_characteristic	UUID 3701be4f-9914-4fa7-a6f9-617c3c7f8c0f	BLERead | BLENotify	Where each samples data block is notified to during the transfer.  Each block has a length of 128 bytes.	128 bytes
 
-
-```%Run BLE_ASYNCHRONOUS_MODE_IMU_Client.py
+With recording_type=10513 set in .py file:
+```
+%Run BLE_ASYNCHRONOUS_MODE_IMU_Client.py
 - Discovering peripheral device...
 * Peripheral device found!
 * Device address: 14:2A:5F:05:B4:F7
@@ -71,9 +72,12 @@ Disconnected callback called!
 Sampling rate was 96 Hz
 Writing 588 samples of ['ax', 'ay', 'az', 'gx', 'gy', 'gz'] to file out_05272025_102118_14-2A-5F-05-B4-F7.xlsx
 Sleeping until device disconnects...
-Disconnected callback called!```
+Disconnected callback called!
+```
 
-```%Run BLE_ASYNCHRONOUS_MODE_IMU_Client.py
+With recording_type=0 set in .py file:
+```
+%Run BLE_ASYNCHRONOUS_MODE_IMU_Client.py
 - Discovering peripheral device...
 * Peripheral device found!
 * Device address: 14:2A:5F:05:B4:F7
@@ -85,8 +89,8 @@ Sleeping until device disconnects...
 Sampling rate was 167 Hz
 Sleeping until device disconnects...
 Writing 1002 samples of ['ax', 'ay', 'az', 'gx', 'gy', 'gz'] to file out_05272025_102038_14-2A-5F-05-B4-F7.xlsx
-Disconnected callback called!```
-
+Disconnected callback called!
+```
 
 ## Known issues
 
