@@ -16,7 +16,13 @@ The total number of samples is limited by the RAM of the arduino nano 33 ble: 10
 
 To begin, in the Arduino IDE:
 * install library Arduino_BMI270_BMM150
-* flash the BLE_ASYNCHRONOUS_MODE_IMU.ino sketch onto an Arduino Nano BLE 33 board, open the serial monitor
+* flash and run the BLE_ASYNCHRONOUS_MODE_IMU.ino sketch onto an Arduino Nano BLE 33 board, open the serial monitor
+* copy the address displayed in the serial monitor, and paste it in the variable value "ble_peripheral_address" in BLE_ASYNCHRONOUS_MODE_IMU_Client.py file
+```
+Sampling rate = 186.27 Hz
+address = 14:2a:5f:05:b4:f7
+device_name = BLEAsynchronousModeIMU-B4F7 <-- copy to "ble_peripheral_address" in BLE_ASYNCHRONOUS_MODE_IMU_Client.py file
+```
 
 Then, in your preferred python environment: 
 * pip install XlsxWriter bleak numpy time pandas datetime

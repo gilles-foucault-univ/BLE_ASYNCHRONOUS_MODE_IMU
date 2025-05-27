@@ -231,6 +231,7 @@ class BLEAsynchronousModeIMUClient(object):
                 if RECORDING_TYPE == 10513: # RECORD_DURING_SECONDS
                     await self.send_command(10000 + mode) # select log mode                    await self.stop() # stop notifications
                     await self.send_command(10512+seconds) # log during <seconds> seconds
+                    await asyncio.sleep(seconds) # wait
                     await self._client.disconnect()                    
                     print("Sleeping until device disconnects...")
                     await self.disconnected_event.wait()
@@ -247,7 +248,7 @@ class BLEAsynchronousModeIMUClient(object):
                 self._samples = []
                 self._samples_count = await self.read_samples_count_characteristic()
                 self._sampling_time = await self.read_sampling_time_characteristic()
-                print(f"Sampling rate was {round(1000*self._samples_count/(self._sample_unit_size*self._sampling_time))} Hz")
+                print(f"Sampling rate was {round(1000*self._samples_count/(self._sample_unit_size*self._sampling_time))} Hz... Please Wait until the {self._samples_count} values are transfered :-)")
                 await self.read_samples_type_name_characteristic()
                 await self.send_command(512) # transfer values
                 while self._samples_read_ok == False:                            
@@ -258,19 +259,21 @@ class BLEAsynchronousModeIMUClient(object):
 # activate all IMU fileds                
 ax=ay=az=gx=gy=gz=mx=my=mz=1
 # log during 1 second
-duration=1
+duration=24
 # recording_type: 0 (slower sampling rate, BLE communication is not stopped)
 # or 10513 (highest frame rate, BLE communication is stopped during sampling)
 recording_type = 10513
 # Debug mode: False by default
 debug_mode = False
+# BLE Peripheral Address 
+ble_peripheral_address='14:2a:5f:05:b4:f7'
 # Main function to run the program
 async def main():
     # USER should set which IMU fields to ignore
     # e.g. "mx=0" to disable mx (x axis of magnetometer)
-    mx=my=mz=0
+    ax=ay=az=mx=my=mz=0
     
-    imu_client1 = BLEAsynchronousModeIMUClient('14:2a:5f:05:b4:f7', debug_mode)
+    imu_client1 = BLEAsynchronousModeIMUClient(ble_peripheral_address, debug_mode)
     await imu_client1.connect()
     await imu_client1.sampling(seconds=duration, mode=((az << 2) | (ay << 1) | (ax << 0)| (gz << 5) | (gy << 4) | (gx << 3) | (mz << 8) | (my << 7) | (mx << 6)), RECORDING_TYPE=recording_type)
     await imu_client1.get_samples()

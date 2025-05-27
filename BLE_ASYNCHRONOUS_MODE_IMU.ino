@@ -1,7 +1,7 @@
 #include "MyIMULogger.h"
 #include "crc32.h"
 
-#define _debug 0
+#define _debug 1
 
 #include <ArduinoBLE.h>
 
