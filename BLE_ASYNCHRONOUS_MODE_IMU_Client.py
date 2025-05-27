@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from bleak import BleakScanner, BleakClient
 import numpy as np
 import pandas as pd
@@ -136,7 +137,8 @@ class BLEAsynchronousModeIMUClient(object):
             if self._float_index == self._samples_count:
                 self._samples_read_ok = True
                 break
-            #print(f"{self._float_index}/{self._samples_count} float indexed\r")
+            sys.stdout.write(f"\rProgression = {int(100.0*self._float_index/self._samples_count)} %\t\t\r")
+            sys.stdout.flush()
         self._last_block_crc32 = crc32(block)
         if(self.debug): print(f"block crc32 is{hex(self._last_block_crc32)}")
         await self.send_last_block_crc32()
@@ -231,10 +233,16 @@ class BLEAsynchronousModeIMUClient(object):
                 if RECORDING_TYPE == 10513: # RECORD_DURING_SECONDS
                     await self.send_command(10000 + mode) # select log mode                    await self.stop() # stop notifications
                     await self.send_command(10512+seconds) # log during <seconds> seconds
-                    await asyncio.sleep(seconds) # wait
-                    await self._client.disconnect()                    
-                    print("Sleeping until device disconnects...")
                     await self.disconnected_event.wait()
+                    # Reconnects through BLE
+                    async with BleakClient(self._device.address, disconnected_callback=self.disconnected_callback, timeout=seconds+1) as self._client:
+                        self._connected = True
+                        self._service = self._client.services.get_service(SERVICE_UUID.upper())
+                        return
+                    # await asyncio.sleep(seconds) # wait
+                    #await self._client.disconnect()                    
+                    #print("Sleeping until device disconnects...")
+                    #await self.disconnected_event.wait()
                 
     async def get_samples(self) -> None:
         if self._device:
@@ -248,7 +256,7 @@ class BLEAsynchronousModeIMUClient(object):
                 self._samples = []
                 self._samples_count = await self.read_samples_count_characteristic()
                 self._sampling_time = await self.read_sampling_time_characteristic()
-                print(f"Sampling rate was {round(1000*self._samples_count/(self._sample_unit_size*self._sampling_time))} Hz... Please Wait until the {self._samples_count} values are transfered :-)")
+                print(f"Sampling rate was {round(1000*self._samples_count/(self._sample_unit_size*self._sampling_time))} Hz... Sampling time was {round(0.001*self._sampling_time)}s... \nPlease Wait until the {self._samples_count} values are transfered :-)")
                 await self.read_samples_type_name_characteristic()
                 await self.send_command(512) # transfer values
                 while self._samples_read_ok == False:                            
@@ -259,7 +267,7 @@ class BLEAsynchronousModeIMUClient(object):
 # activate all IMU fileds                
 ax=ay=az=gx=gy=gz=mx=my=mz=1
 # log during 1 second
-duration=24
+duration=60
 # recording_type: 0 (slower sampling rate, BLE communication is not stopped)
 # or 10513 (highest frame rate, BLE communication is stopped during sampling)
 recording_type = 10513
@@ -271,7 +279,7 @@ ble_peripheral_address='14:2a:5f:05:b4:f7'
 async def main():
     # USER should set which IMU fields to ignore
     # e.g. "mx=0" to disable mx (x axis of magnetometer)
-    ax=ay=az=mx=my=mz=0
+    gx=gz=ax=ay=az=mx=my=mz=0
     
     imu_client1 = BLEAsynchronousModeIMUClient(ble_peripheral_address, debug_mode)
     await imu_client1.connect()
