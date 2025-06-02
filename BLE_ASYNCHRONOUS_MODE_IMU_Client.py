@@ -45,14 +45,14 @@ def byte_array_to_ulong(data) -> np.ulong:
     return np.frombuffer(data, dtype=np.ulong, count=1).astype(np.ulong)[0]
 
 class BLEAsynchronousModeIMUClient(object):
-    def __init__(self, uuid:str, debug) -> None:
+    def __init__(self, device_address:str, debug) -> None:
         super().__init__()
         self._client = None
         self._device = None
         self._service = None
         self._connected = False
         self._running = False
-        self._uuid = uuid
+        self._address = device_address
         self._found = False
         self._sampling_time: np.ulong
         self._samples_count: np.uint32 = np.uint32(0)
@@ -71,9 +71,8 @@ class BLEAsynchronousModeIMUClient(object):
         return self._connected
     
     @property
-    def uuid(self) -> str:
-        return self._uuid
-        
+    def address(self) -> str:
+        return self._address
 
     @property
     def running(self) -> bool:
@@ -194,16 +193,27 @@ class BLEAsynchronousModeIMUClient(object):
         print("- Discovering peripheral device...")
         # https://github.com/hbldh/bleak/discussions/1271
         devices = await BleakScanner.discover(return_adv=True)
+        if self._address == "": print("Please specify the adress of the peripheral among those:")
         self._device = None
         self._service = None
         self._connected = False
+        i_device = 1
+        list_candidate_devices = {}
         for key, dev_and_adv_dat in devices.items():
             device = dev_and_adv_dat[0]
             name = device.name or ""
             adv_dat = dev_and_adv_dat[1]
-            if self._uuid.upper() == device.address.upper():
+            if self._address == "":
+                if device.name is not None and "BLEAsynchronousModeIMU-" in device.name:
+                        print(f"{i_device})\t{device.name} --> address={device.address}")
+                        list_candidate_devices[i_device] = device
+                        i_device = i_device+1
+            elif self._address.upper() == device.address.upper():
                 self._device = device
                 break
+        if len(list_candidate_devices)>0:
+            choice = int(input("Your choice?"))
+            self._device = list_candidate_devices[choice]
 
         if self._device:
             print("* Peripheral device found!")
@@ -274,7 +284,9 @@ recording_type = 10513
 # Debug mode: False by default
 debug_mode = False
 # BLE Peripheral Address copied from the Arduino serial monitor
-ble_peripheral_address='14:2a:5f:05:b4:f7'
+# echappement horloge 63:C3:29:BF:C2:6A
+# nano 33 au labo 14:2a:5f:05:b4:f7
+ble_peripheral_address="14:2a:5f:05:b4:f7"
 # Main function to run the program
 async def main():
     # USER should set which IMU fields to ignore
