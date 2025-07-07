@@ -59,6 +59,7 @@ class BLEAsynchronousModeIMUClient(object):
         self._last_block_crc32: int = 0
         self._samples_type_name: str = ""
         self._samples_type_name_array: List[str] = []
+        self._samples_date = datetime.now()
         self._type_name: str
         self._samples = []
         self.debug = debug
@@ -145,7 +146,8 @@ class BLEAsynchronousModeIMUClient(object):
             self.write_excel()
         
     def write_excel(self): 
-        my_date = datetime.now().strftime("_%m%d%Y_%H%M%S")
+        #my_date = datetime.now().strftime("_%m%d%Y_%H%M%S")
+        my_date = self._samples_date.strftime("_%m%d%Y_%H%M%S.%f")[:-3]
         filename = f"out{my_date}_{self._device.address.replace(':', '-')}.xlsx"
         print(f"Writing {self._samples_count} samples of {self._samples_type_name_array} to file {filename}")
         df = pd.DataFrame(self._samples, columns=self._samples_type_name_array)
@@ -228,11 +230,12 @@ class BLEAsynchronousModeIMUClient(object):
     # RECORDING_TYPE: 0 --> RECORD_UNTIL_STOP The sampling rate will be slower than RECORD_DURING_SECONDS command.
     async def sampling(self, seconds: int, mode: int, RECORDING_TYPE: int) -> None:      
         if self._device:
-            async with BleakClient(self._device.address, disconnected_callback=self.disconnected_callback) as self._client:
+            async with BleakClient(self._device.address, disconnected_callback=self.disconnected_callback, timeout=5) as self._client:
                 self._connected = True
                 self._service = self._client.services.get_service(SERVICE_UUID.upper())
                 # starts notifications
                 await self.start()
+                self._samples_date = datetime.now()
                 print(f"Start logging for {seconds}s")
                 if RECORDING_TYPE == 0: # RECORD_UNTIL_STOP 
                     await self.send_command(mode) # start to log "gz"
@@ -243,9 +246,9 @@ class BLEAsynchronousModeIMUClient(object):
                 if RECORDING_TYPE == 10513: # RECORD_DURING_SECONDS
                     await self.send_command(10000 + mode) # select log mode                    await self.stop() # stop notifications
                     await self.send_command(10512+seconds) # log during <seconds> seconds
-                    await self.disconnected_event.wait()
+                    # await self.disconnected_event.wait()
                     # Reconnects through BLE
-                    async with BleakClient(self._device.address, disconnected_callback=self.disconnected_callback, timeout=seconds+1) as self._client:
+                    async with BleakClient(self._device.address, disconnected_callback=self.disconnected_callback, timeout=seconds+5) as self._client:
                         self._connected = True
                         self._service = self._client.services.get_service(SERVICE_UUID.upper())
                         return
@@ -285,20 +288,70 @@ recording_type = 10513
 debug_mode = False
 # BLE Peripheral Address copied from the Arduino serial monitor
 # echappement horloge 63:C3:29:BF:C2:6A
-# nano 33 au labo 14:2a:5f:05:b4:f7
-ble_peripheral_address="14:2a:5f:05:b4:f7"
-# Main function to run the program
-async def main():
+# PENDULE 14:2a:5f:05:b4:f7
+
+# --- echappement ----
+UUID_echap = "63:C3:29:BF:C2:6A"
+gx=gz=ax=ay=az=mx=my=mz=0
+gy=1
+mode_echap=((az << 2) | (ay << 1) | (ax << 0)| (gz << 5) | (gy << 4) | (gx << 3) | (mz << 8) | (my << 7) | (mx << 6))
+# --- pendule ----
+UUID_pendule = "14:2a:5f:05:b4:f7"
+gx=gy=gz=ax=ay=az=mx=my=mz=0
+gz=1
+mode_pendule=((az << 2) | (ay << 1) | (ax << 0)| (gz << 5) | (gy << 4) | (gx << 3) | (mz << 8) | (my << 7) | (mx << 6))
+# --- ordi ----
+UUID_ordi = "64:ae:99:0c:c7:db"
+mode_ordi = mode_pendule
+
+# (SINGLE SENSOR) Main function to run the program
+async def main_single_sensor():
+    ble_peripheral_address=UUID_echap
+    m=mode_echap
     # USER should set which IMU fields to ignore
     # e.g. "mx=0" to disable mx (x axis of magnetometer)
-    gx=gz=ax=ay=az=mx=my=mz=0
-    
     imu_client1 = BLEAsynchronousModeIMUClient(ble_peripheral_address, debug_mode)
     await imu_client1.connect()
-    await imu_client1.sampling(seconds=duration, mode=((az << 2) | (ay << 1) | (ax << 0)| (gz << 5) | (gy << 4) | (gx << 3) | (mz << 8) | (my << 7) | (mx << 6)), RECORDING_TYPE=recording_type)
+    await imu_client1.sampling(seconds=duration, mode=m, RECORDING_TYPE=recording_type)
     await imu_client1.get_samples()
     await asyncio.sleep(1)
     return
 
+
+# # (parrallel version) Main function to run the program
+# # pendule
+# imu_client2 = BLEAsynchronousModeIMUClient("14:2a:5f:05:b4:f7", debug_mode)
+# echappement
+imu_client1 = BLEAsynchronousModeIMUClient(UUID_echap, debug_mode)
+mode1 = mode_echap
+imu_client2 = BLEAsynchronousModeIMUClient(UUID_pendule, debug_mode)
+mode2 = mode_pendule
+imu_client3 = BLEAsynchronousModeIMUClient(UUID_ordi, debug_mode)
+mode3 = mode_ordi
+
+async def main_multi_sensor():
+    # Create a new IMU client.
+    global imu_client1
+    global imu_client2
+    await asyncio.gather(
+        imu_client1.connect()
+        ,imu_client2.connect()
+        ,imu_client3.connect()
+    )
+    await asyncio.gather(
+        imu_client1.sampling(seconds=duration, mode=mode1, RECORDING_TYPE=recording_type)
+        ,imu_client2.sampling(seconds=duration, mode=mode2, RECORDING_TYPE=recording_type)        
+        ,imu_client3.sampling(seconds=duration, mode=mode3, RECORDING_TYPE=recording_type)
+    )
+    await asyncio.gather(
+        imu_client1.get_samples()
+        ,imu_client2.get_samples()
+        ,imu_client3.get_samples()    
+    )
+    await asyncio.sleep(1)
+
+    print('Program finished')
+
 # Run the main function
-asyncio.run(main())
+asyncio.run(main_multi_sensor())
+
